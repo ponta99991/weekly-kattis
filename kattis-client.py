@@ -2,6 +2,7 @@ from lib import problems as kattis
 from lib import auth as kattis_auth
 from lib import auth
 from lib import communication as network
+from lib import common
 import base64
 import os
 import tkinter as tk
@@ -11,7 +12,8 @@ import time
 import sys
 import webbrowser
 from PIL import ImageTk, Image  
-
+import struct
+from collections import namedtuple
 
 from cryptography.fernet import Fernet
 import getpass
@@ -21,8 +23,6 @@ WINDOW_H = 600
 
 def callback(url):
     webbrowser.open_new(url)
-
-    
 
 def save_credentials(username, password):
     print("Enter username: ")
@@ -52,7 +52,6 @@ def load_credentials():
     password = fernet.decrypt(line[2])
     return [username, password]
 
-
 # if(not os.path.exists("./user_credencials")):
 #     save_credentials()
 # user = load_credentials()
@@ -77,13 +76,10 @@ def on_login():
     
     print(kattis_user.stats())
 
-
 def on_load_credentials():
     [username, password] = load_credentials()
     username_field.insert(0, username) 
     password = password_field.insert(0, password)
-
-
 
 # def login_menu():
 #     login_frame = tk.LabelFrame(text="Enter your Kattis credentials").pack()#place(x=WINDOW_W/2, y=WINDOW_H/2-20)
@@ -110,11 +106,6 @@ def clearFrame():
     # if you want to hide the empty panel then
     #window.forget()
 
-def get_problem():
-    network.send_string(server, "get_this_weeks_problem")
-    ans = network.recieve_string(server)
-    print(ans)
-    return ans
 
 def on_check_for_solution():
     network.send_string(server, "get_this_weeks_problem")
@@ -148,35 +139,25 @@ def on_connect():
         connection_error_field.config(text = "Connection error...")
         return
 
+    # information_frame = tk.LabelFrame(window, text="This Weeks Problem").place(x=WINDOW_W/2, y=0)
+    # this_weeks_problem = get_problem()
+    # problem_label = tk.Label(information_frame, text=this_weeks_problem, fg="blue", cursor="hand2")
+    # problem_label.pack()
+    # this_weeks_problem_page = kattis.problem(this_weeks_problem)
+    # print(this_weeks_problem_page)
+    # problem_label.bind("<Button-1>", lambda e: callback(this_weeks_problem_page['url']))
     #clearFrame()
 
-    
-    #information_frame = tk.LabelFrame(window, text="This Weeks Problem").place(x=WINDOW_W/2, y=0)
-    #this_weeks_problem = get_problem()
-    #problem_label = tk.Label(information_frame, text=this_weeks_problem, fg="blue", cursor="hand2")
-    #problem_label.pack()
-    #this_weeks_problem_page = kattis.problem(this_weeks_problem)
-    #print(this_weeks_problem_page)
-    #problem_label.bind("<Button-1>", lambda e: callback(this_weeks_problem_page['url']))
-    
     create_choose_task()
 
 def on_show_task(task_number):
     print(task_number)
+    leaderboard = get_leaderboard(task_number)
+    display_leaderboard(frame_info, leaderboard)
 
 def create_choose_task():
     frame_choose_task = tk.LabelFrame(frame_sidebar, text="Choose Task" , height=150, bg="lime")
     frame_choose_task.grid(row=2, column=0, padx=5, pady=5)
-
-    # frame_challenge_1 = tk.Frame(frame_choose_task, width=50, height=50, bg="green", cursor="hand2")
-    # frame_challenge_1.grid_propagate(0)
-    # frame_challenge_1.grid(row=1, column=0, padx=5, pady=5)
-    # frame_challenge_2 = tk.Frame(frame_choose_task, width=50, height=50, bg="yellow", cursor="hand2")
-    # frame_challenge_2.grid_propagate(0)
-    # frame_challenge_2.grid(row=2, column=0, padx=5, pady=5)
-    # frame_challenge_3 = tk.Frame(frame_choose_task, width=50, height=50, bg="purple", cursor="hand2")
-    # frame_challenge_3.grid_propagate(0)
-    # frame_challenge_3.grid(row=3, column=0, padx=5, pady=5)
     
     global button_task 
     button_task = []
@@ -196,7 +177,7 @@ def create_choose_task():
     # label_photo_1.grid(row=0, column=0)
 
 
-def nice_interface():
+def create_interface():
     global frame_sidebar
     frame_sidebar = tk.Frame(window, width=WINDOW_W/5, height=WINDOW_H, bg="purple")
     frame_sidebar.grid(row=0, column=0, sticky="nsew")#, padx=10, pady=5)
@@ -257,44 +238,43 @@ def nice_interface():
 
     #When logged in and connected
 
+def get_leaderboard(leaderboard_index):
+    problemRequest = network.Packet(request=True, content="get_leaderboard", index=0)
+    network.send_packet(server, problemRequest)
+    packet = network.recieve_packet(server)
+    leaderboard = packet.data
+    print(leaderboard.task)
+    return leaderboard
+
+def display_leaderboard(field, leaderboard):
+    
+    for i in range(len(leaderboard.user)):
+        leaderboard_user_field = tk.Frame(field, height=20)
+        leaderboard_user_field.grid(row=i, column=0)
+        tk.Label(leaderboard_user_field, text=leaderboard.user[i].username).grid(row=0, column=0)
+        tk.Label(leaderboard_user_field, text=leaderboard.user[i].score).grid(row=0, column=1)
+        tk.Label(leaderboard_user_field, text=leaderboard.user[i].time).grid(row=0, column=2)
+        tk.Label(leaderboard_user_field, text=leaderboard.user[i].date).grid(row=0, column=3)
+
+def get_problem():
+    problemRequest = network.Packet(request=True, content="get_weekly")
+    network.send_packet(server, problemRequest)
+    packet = network.recieve_packet(server)
+    print(packet.data)
+    return packet.data
+
 def on_closing():
     sys.exit()
 
 
-def display_leaderboard():
-    print("")
-
-# greeting = tk.Label(text="Hello, Tkinter")
-# greeting.pack()
 
 window = tk.Tk()
 window.title("Strobe's Kattis Client")
 #window.geometry('{0}x{1}'.format(str(WINDOW_W), str(WINDOW_H)))
 window.protocol("WM_DELETE_WINDOW", on_closing)
-
-
-
-
 #login_menu()
 #create_menu()
-nice_interface()
+create_interface()
 
 
 window.mainloop()
-
-tk.Label(window, text="Username").place(x=10, y=10)
-
-
-
-
-
-tk.Label(window, text="Username").pack(side="left")
-tk.Entry(window, bd=10).pack(side="right")
-tk.Button(window, text="Save", command=save_credentials).pack()
-tk.Button(window, text="Load", command=load_credentials).pack()
-
-
-#problems = kattis.problems(2)
-#print(problems)
-#problem = kattis.problem('2048')
-#print(problem)
