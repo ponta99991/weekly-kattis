@@ -14,7 +14,7 @@ class KattisUser:
     """
 
     def __init__(self, username, password, cookies):
-        self.__username = username
+        self.username = username
         self.__password = password
         self.__cookies = cookies
         self.__submission_url = "https://open.kattis.com/users/"
@@ -55,7 +55,7 @@ class KattisUser:
 
         stats_page = Utils.html_page(
             requests.get(
-                self.__submission_url + self.__username,
+                self.__submission_url + self.username,
                 data=data,
                 cookies=self.__cookies,
             )
@@ -78,7 +78,7 @@ class KattisUser:
         """
         pages = 28
         return {
-            "username": self.__username,
+            "username": self.username,
             "stats": self.stats(),
             "problems": self.problems(pages)
         }

@@ -25,7 +25,7 @@ def callback(url):
     webbrowser.open_new(url)
 
 def save_credentials(username, password):
-    print("Enter username: ")
+    #print("Enter username: ")
     #username = input()
     # try:
     #     password = getpass.getpass()
@@ -33,7 +33,17 @@ def save_credentials(username, password):
     #     print('ERROR', error)
     #     exit(-1)
 
-    file = open("user_credencials", "w")
+    if(os.path.exists("./user_credencials.txt")):
+        file = open("./user_credencials.txt", "r+")
+        file.readline()
+        if file.readline() == username + "\n":
+            file.close()
+            return
+        else:
+            file.seek(0)
+    else:
+        file = open("./user_credencials.txt", "w")
+
     key = Fernet.generate_key()
     fernet = Fernet(key)
 
@@ -41,21 +51,21 @@ def save_credentials(username, password):
     file.write(username + '\n')
     file.write(fernet.encrypt(password.encode()).decode())
     file.close()
-    os.system( "attrib +h user_credencials" )
+    os.system( "attrib +h user_credencials.txt" )
 
 def load_credentials():
-    file = open("user_credencials", "r")
+    if(not os.path.exists("./user_credencials.txt")):
+        return
+    file = open("user_credencials.txt", "r")
     line = file.read().splitlines()
     
     fernet = Fernet(line[0])
     username = line[1]
     password = fernet.decrypt(line[2])
-    return [username, password]
-
-# if(not os.path.exists("./user_credencials")):
-#     save_credentials()
-# user = load_credentials()
-#print(user)
+    username_field.insert(0, username) 
+    password_field.insert(0, password)
+    file.close()
+    #return [username, password]
 
 def on_login():
     username = username_field.get()
@@ -74,32 +84,25 @@ def on_login():
         save_credentials(username, password)
         #print("Saving!")
     
-    print(kattis_user.stats())
+    clearFrame(frame_login)
+    
+    #Login frame
+    global kattis_user_data
+    kattis_user_stats = kattis_user.stats()
+    tk.Label(frame_login, text="Logged in as: \n" + kattis_user.username).grid(row=0, column=0)
+    tk.Label(frame_login, text="Score: " + kattis_user_stats['score']).grid(row=1, column=0)
+    tk.Label(frame_login, text="Rank: #" + kattis_user_stats['rank']).grid(row=2, column=0)
 
-def on_load_credentials():
-    [username, password] = load_credentials()
-    username_field.insert(0, username) 
-    password = password_field.insert(0, password)
+    #print(kattis_user.stats())
 
-# def login_menu():
-#     login_frame = tk.LabelFrame(text="Enter your Kattis credentials").pack()#place(x=WINDOW_W/2, y=WINDOW_H/2-20)
-#     tk.Label(login_frame, text="Username").pack()
-#     tk.Label(text="Password")
-#     global username_field
-#     username_field = tk.Entry(login_frame)
-#     username_field.pack()
-#     global password_field
-#     password_field = tk.Entry(login_frame, show='*')
-#     password_field.pack()
-#     tk.Button(login_frame, text="Load Credentials", command=on_load_credentials).pack()
-#     global save_credentials_checkbox
-#     save_credentials_checkbox = tk.IntVar()
-#     tk.Checkbutton(text="Save password", variable=save_credentials_checkbox).pack()
-#     tk.Button(login_frame, text="Login", command=on_login).pack()
+# def on_load_credentials():
+#     [username, password] = load_credentials()
+#     username_field.insert(0, username) 
+#     password = password_field.insert(0, password)
 
-def clearFrame():
+def clearFrame(frame):
     # destroy all widgets from frame
-    for widget in window.winfo_children():
+    for widget in frame.winfo_children():
        widget.destroy()
     
     # this will clear frame and frame will be empty
@@ -134,11 +137,12 @@ def on_check_for_solution():
 
 def on_connect():
     global server
-    [success, server] = network.connect(ip_field.get(), int(port_field.get()))
-    if not success == 0:
+    [connection_established, server] = network.connect(ip_field.get(), int(port_field.get()))
+    if not connection_established == 0:
         connection_error_field.config(text = "Connection error...")
         return
 
+    clearFrame(frame_connect)
     # information_frame = tk.LabelFrame(window, text="This Weeks Problem").place(x=WINDOW_W/2, y=0)
     # this_weeks_problem = get_problem()
     # problem_label = tk.Label(information_frame, text=this_weeks_problem, fg="blue", cursor="hand2")
@@ -146,18 +150,19 @@ def on_connect():
     # this_weeks_problem_page = kattis.problem(this_weeks_problem)
     # print(this_weeks_problem_page)
     # problem_label.bind("<Button-1>", lambda e: callback(this_weeks_problem_page['url']))
-    #clearFrame()
+    #clearFrame(window)
 
     create_choose_task()
 
 def on_show_task(task_number):
     print(task_number)
     leaderboard = get_leaderboard(task_number)
-    display_leaderboard(frame_info, leaderboard)
+    display_leaderboard(frame_leaderboard, leaderboard)
 
 def create_choose_task():
-    frame_choose_task = tk.LabelFrame(frame_sidebar, text="Choose Task" , height=150, bg="lime")
-    frame_choose_task.grid(row=2, column=0, padx=5, pady=5)
+    frame_choose_task = tk.LabelFrame(frame_sidebar, text="Choose Task" , bg="lime")
+    frame_choose_task.grid(row=2, column=0, padx=5, pady=5, sticky="e,w")
+    #frame_choose_task.grid_propagate(0)
     
     global button_task 
     button_task = []
@@ -168,7 +173,7 @@ def create_choose_task():
         button = tkinter.Button(frame_choose_task, image=image_photo[i], command= lambda c=i: on_show_task(c), width=50, height=50)
         button.image = image_photo[i]
         button_task.append(button)
-        button.grid(row=i, column=0, padx=5, pady=5)
+        button.grid(row=i, column=0, padx=5, pady=5, sticky="w,e")
 
     # img_1 = Image.open("res/easy.png")
     # photo_1 = ImageTk.PhotoImage(img_1)
@@ -183,21 +188,17 @@ def create_interface():
     frame_sidebar.grid(row=0, column=0, sticky="nsew")#, padx=10, pady=5)
     #frame_sidebar.grid_propagate(0)
 
-    global frame_info
-    frame_info = tk.Frame(window, width=WINDOW_W*4/5, height=WINDOW_H, bg="green")
-    frame_info.grid(row=0, column=1)
+    global frame_leaderboard
+    frame_leaderboard = tk.Frame(window, width=WINDOW_W*4/5, height=WINDOW_H, bg="green")
+    frame_leaderboard.grid(row=0, column=1)
 
+    global frame_connect
     frame_connect = tk.LabelFrame(frame_sidebar, text="Connect" , width=WINDOW_W/5, height=WINDOW_H*2/5, bg="red")
     frame_connect.grid(row=1, column=0, padx=5, pady=5)
 
+    global frame_login
     frame_login = tk.LabelFrame(frame_sidebar, text="Login", width=WINDOW_W/5, height=WINDOW_H*3/5, bg="yellow")
     frame_login.grid(row=0, column=0, padx=5, pady=5)
-
-    frame_week = tk.Frame(frame_info, width=WINDOW_W*4/5, height=WINDOW_H*1/10, bg="orange")
-    frame_week.pack_propagate(0)
-    frame_week.grid(row=0, column=0, padx=5, pady=5)
-
-    tk.Label(frame_week, text="Week 1").pack()
 
     #Connect frame
     #connect_frame = tk.LabelFrame(text="Specify the destination you want to connect to").place(x=WINDOW_W/2, y=WINDOW_H/2-20)
@@ -230,11 +231,15 @@ def create_interface():
     global password_field
     password_field = tk.Entry(frame_login, show='*')
     password_field.grid(row=2, column=0)
-    tk.Button(frame_login, text="Load Credentials", command=on_load_credentials).grid(row=3, column=0)
+    #tk.Button(frame_login, text="Load Credentials", command=on_load_credentials).grid(row=3, column=0)
     global save_credentials_checkbox
     save_credentials_checkbox = tk.IntVar()
-    tk.Checkbutton(frame_login, text="Save password", variable=save_credentials_checkbox).grid(row=4, column=0)
+    save_checkbox = tk.Checkbutton(frame_login, text="Save password", variable=save_credentials_checkbox)
+    save_checkbox.grid(row=4, column=0)
+    if(os.path.exists("./user_credencials.txt")):
+        save_checkbox.toggle()
     tk.Button(frame_login, text="Login", command=on_login).grid(row=5, column=0)
+    load_credentials()
 
     #When logged in and connected
 
@@ -246,15 +251,36 @@ def get_leaderboard(leaderboard_index):
     print(leaderboard.task)
     return leaderboard
 
-def display_leaderboard(field, leaderboard):
+def display_leaderboard(frame_leaderboard, leaderboard):
+    clearFrame(frame_leaderboard)
+    frame_title = tk.Frame(frame_leaderboard, bg="orange")
+    frame_title.grid(row=0, column=0, padx=5, pady=5)
+    
+    kattis_task = kattis.problem(leaderboard.task)
+    print(kattis_task)
+    problem_label = tk.Label(frame_title, text=kattis_task["title"], fg="blue", cursor="hand2")
+    problem_label.pack()
+    problem_label.bind("<Button-1>", lambda e: callback(kattis_task['url']))
+    #tk.Label(frame_title, text=leaderboard.task).pack()
+
+    frame_header = tk.Frame(frame_leaderboard, bg="yellow")
+    frame_header.grid(row=1, column=0, padx=5, pady=5)
+    tk.Label(frame_header, text="Username").grid(row=0, column=0)
+    tk.Label(frame_header, text="Score").grid(row=0, column=1)
+    tk.Label(frame_header, text="Time").grid(row=0, column=2)
+    tk.Label(frame_header, text="Date").grid(row=0, column=3)
+
+    frame_list = tk.Frame(frame_leaderboard, bg="green")
+    frame_list.grid(row=2, column=0, padx=5, pady=5)
     
     for i in range(len(leaderboard.user)):
-        leaderboard_user_field = tk.Frame(field, height=20)
+        leaderboard_user_field = tk.Frame(frame_list, height=20)
         leaderboard_user_field.grid(row=i, column=0)
         tk.Label(leaderboard_user_field, text=leaderboard.user[i].username).grid(row=0, column=0)
         tk.Label(leaderboard_user_field, text=leaderboard.user[i].score).grid(row=0, column=1)
         tk.Label(leaderboard_user_field, text=leaderboard.user[i].time).grid(row=0, column=2)
         tk.Label(leaderboard_user_field, text=leaderboard.user[i].date).grid(row=0, column=3)
+
 
 def get_problem():
     problemRequest = network.Packet(request=True, content="get_weekly")
@@ -276,5 +302,6 @@ window.protocol("WM_DELETE_WINDOW", on_closing)
 #create_menu()
 create_interface()
 
+#kattis.problem("listgame")
 
 window.mainloop()

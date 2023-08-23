@@ -2,6 +2,7 @@
 /dist/*
 *.spec
 user_credencials
+*.txt
 
 *.csproj
 *.sln
