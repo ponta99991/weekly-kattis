@@ -20,6 +20,20 @@ def problems(pages=1) -> dict:
             ret.append(problem(problem_id))
     return ret
 
+def problems_ordered(pages=1) -> dict:
+    """
+    Fetches all Kattis problems
+
+    :param pages: number of problem pages, defaults to 1
+    :rtype: list of problem objects
+    """
+    ret = []
+    for page in range(pages):
+        print("Fetching page " + str(page) + "...")
+        probs = Utils.html_page(requests.get(URL + "?order=difficulty_category" + "?page={}".format(page)))
+        for problem_id in problem_list(probs):
+            ret.append(problem(problem_id))
+    return ret
 
 def problem(problem_id: str) -> dict:
     """

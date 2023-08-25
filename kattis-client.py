@@ -24,7 +24,7 @@ WINDOW_H = 600
 def callback(url):
     webbrowser.open_new(url)
 
-def save_credentials(username, password):
+def save_credentials(alias, username, password):
     #print("Enter username: ")
     #username = input()
     # try:
@@ -35,12 +35,12 @@ def save_credentials(username, password):
 
     if(os.path.exists("./user_credencials.txt")):
         file = open("./user_credencials.txt", "r+")
-        file.readline()
-        if file.readline() == username + "\n":
-            file.close()
-            return
-        else:
-            file.seek(0)
+        # file.readline()
+        # if file.readline() == username + "\n":
+        #     file.close()
+        #     return
+        # else:
+        #     file.seek(0)
     else:
         file = open("./user_credencials.txt", "w")
 
@@ -49,6 +49,7 @@ def save_credentials(username, password):
 
     file.write(key.decode() + '\n')
     file.write(username + '\n')
+    file.write(alias + '\n')
     file.write(fernet.encrypt(password.encode()).decode())
     file.close()
     os.system( "attrib +h user_credencials.txt" )
@@ -61,7 +62,9 @@ def load_credentials():
     
     fernet = Fernet(line[0])
     username = line[1]
-    password = fernet.decrypt(line[2])
+    alias = line[2]
+    password = fernet.decrypt(line[3])
+    alias_field.insert(0, alias)
     username_field.insert(0, username) 
     password_field.insert(0, password)
     file.close()
@@ -70,8 +73,13 @@ def load_credentials():
 is_logged_in_on_kattis = False
 def on_login():
     global username
+    global alias
+    alias = alias_field.get()
     username = username_field.get()
     password = password_field.get()
+    if(len(alias) < 1):
+        tkinter.messagebox.showinfo("Error!", "Please enter alias to be displayed in leaderboard.")
+        return
     if(len(username) < 1 or len(password) < 1):
         tkinter.messagebox.showinfo("Error!", "Enter your credentials")
         return
@@ -84,7 +92,7 @@ def on_login():
         return
 
     if(save_credentials_checkbox.get()):
-        save_credentials(username, password)
+        save_credentials(alias, username, password)
         #print("Saving!")
     
 
@@ -98,8 +106,8 @@ def on_login():
     tk.Label(frame_login, text="Score: " + kattis_user_stats['score']).grid(row=1, column=0)
     tk.Label(frame_login, text="Rank: #" + kattis_user_stats['rank']).grid(row=2, column=0)
 
-    if is_connected_to_server:
-        create_validator()
+    create_validator()
+    
     #print(kattis_user.stats())
 
 # def on_load_credentials():
@@ -117,9 +125,9 @@ def clearFrame(frame):
     #window.forget()
 
 
-def on_check_for_solution():
-    network.send_string(server, "get_this_weeks_problem")
-    ans = network.recieve_string(server)
+# def on_check_for_solution():
+#     network.send_string(server, "get_this_weeks_problem")
+#     ans = network.recieve_string(server)
     
 
 # def create_menu():
@@ -165,8 +173,7 @@ def on_connect():
 
     create_choose_task()
 
-    if(is_logged_in_on_kattis):
-        create_validator()
+    
 
 
 
@@ -192,15 +199,24 @@ def create_choose_task():
     # label_photo_1.image = photo_1
     # label_photo_1.grid(row=0, column=0)
 
+
 def on_validation():
     if not ('current_displayed_leaderboard' in globals()):
         tkinter.messagebox.showinfo("Please!", "Choose an exercise to validate!")
         return
-
+    
+    
     [success, date, runtime, lang] = kattis_user.problem(current_displayed_leaderboard.task)
+
     if(success == False):
         tkinter.messagebox.showinfo("Cheating!", "You need to complete the exercise!")
         return
+
+    for user in current_displayed_leaderboard.user:
+        if user.username == username:
+            if user.date == date and user.runtime == runtime and user.lang == lang and user.alias == alias:
+                tkinter.messagebox.showinfo("Alert!", "You have already validated your code!")
+                return
 
     #Remember:
     #Add answer for when person have been added maybee
@@ -208,7 +224,7 @@ def on_validation():
     #No add check if user already is uploaded to leaderboard in client.
     
     #By some reason the complete html is transmitted? KAttis html
-    new_user = common.User(username=username, date=date, time=runtime, lang=lang)
+    new_user = common.User(alias=alias, username=username, date=date, runtime=runtime, lang=lang)
     #new_user = common.User(username = "a", lang="b", time="c", date=33)
     #packet = network.Packet(request=True, content="add_to_leaderboard", data=new_user, index=1)
     packet = network.Packet(request=True, content="add_to_leaderboard", data=new_user, index=leaderboard_index)
@@ -220,17 +236,23 @@ def on_validation():
     display_leaderboard(frame_leaderboard, leaderboard)
     
     clearFrame(frame_validator)
+    global validator_cleared
+    validator_cleared = True
 
     tk.Label(frame_validator, text="Validated!").pack()
 
-
+validator_cleared = True
 def create_validator():
+    global validator_cleared
+    if not validator_cleared or not is_connected_to_server or not is_logged_in_on_kattis:
+        return
     global frame_validator
     frame_validator = tk.LabelFrame(frame_sidebar, text="Validate")
     frame_validator.grid(row=3, column=0, sticky="e, w")
     global validate_button
     validate_button = tk.Button(frame_validator, text="Validate Submission", command=on_validation)
     validate_button.pack()
+    validator_cleared = False
 
 
 def create_interface():
@@ -276,12 +298,15 @@ def create_interface():
     #frame_login = tk.LabelFrame(text="Enter your Kattis credentials").pack()#place(x=WINDOW_W/2, y=WINDOW_H/2-20)
     tk.Label(frame_login, text="Username").grid(row=0, column=0)
     tk.Label(text="Password")
+    global alias_field
+    alias_field = tk.Entry(frame_login)
+    alias_field.grid(row=1, column=0)
     global username_field
     username_field = tk.Entry(frame_login)
-    username_field.grid(row=1, column=0)
+    username_field.grid(row=2, column=0)
     global password_field
     password_field = tk.Entry(frame_login, show='*')
-    password_field.grid(row=2, column=0)
+    password_field.grid(row=3, column=0)
     #tk.Button(frame_login, text="Load Credentials", command=on_load_credentials).grid(row=3, column=0)
     global save_credentials_checkbox
     save_credentials_checkbox = tk.IntVar()
@@ -311,6 +336,7 @@ def get_leaderboard(i):
     return leaderboard
 
 def display_leaderboard(frame_leaderboard, leaderboard):
+    create_validator()
     clearFrame(frame_leaderboard)
     frame_title = tk.Frame(frame_leaderboard, bg="orange")
     frame_title.grid(row=0, column=0, padx=5, pady=5)
@@ -327,8 +353,8 @@ def display_leaderboard(frame_leaderboard, leaderboard):
 
     frame_header = tk.Frame(frame_leaderboard, bg="yellow")
     frame_header.grid(row=1, column=0, padx=5, pady=5)
-    tk.Label(frame_header, text="Username").grid(row=0, column=0)
-    tk.Label(frame_header, text="Time").grid(row=0, column=1)
+    tk.Label(frame_header, text="User").grid(row=0, column=0)
+    tk.Label(frame_header, text="Runtime").grid(row=0, column=1)
     tk.Label(frame_header, text="Lang").grid(row=0, column=2)
     tk.Label(frame_header, text="Date").grid(row=0, column=3)
 
@@ -343,10 +369,12 @@ def display_leaderboard(frame_leaderboard, leaderboard):
     for i in range(len(leaderboard.user)):
         leaderboard_user_field = tk.Frame(frame_list, height=20)
         leaderboard_user_field.grid(row=i, column=0)
-        tk.Label(leaderboard_user_field, text=leaderboard.user[i].username).grid(row=0, column=0)
-        tk.Label(leaderboard_user_field, text=leaderboard.user[i].time).grid(row=0, column=1)
+        tk.Label(leaderboard_user_field, text=leaderboard.user[i].alias).grid(row=0, column=0)
+        tk.Label(leaderboard_user_field, text=leaderboard.user[i].runtime).grid(row=0, column=1)
         tk.Label(leaderboard_user_field, text=leaderboard.user[i].lang).grid(row=0, column=2)
         tk.Label(leaderboard_user_field, text=leaderboard.user[i].date).grid(row=0, column=3)
+    
+    
 
 
 def get_problem():

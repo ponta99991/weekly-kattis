@@ -19,15 +19,17 @@ format_ = "6shhih50s2s"
 
 
 class User:
+    alias: str
     username: str
-    time: float
+    runtime: float
     date: float
     lang: str
 
-    def __init__(self, username, lang, time, date = 0):
+    def __init__(self, alias, username, lang, runtime, date = 0):
+        self.alias = alias
         self.username = username
         self.lang = lang
-        self.time = time
+        self.runtime = runtime
         self.date = date
 
 class Leaderboard:

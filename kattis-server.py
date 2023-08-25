@@ -60,11 +60,14 @@ def get_option(client, packet):
         network.send_packet(client, answer)
 
     if(packet.content == "add_to_leaderboard"):
-        
+        i = 0
         for user in leaderboard[packet.index].user:
             if packet.data.username == user.username:
-                print("User already added")
+                print("User already added, overwriting")
+                leaderboard[packet.index].user[i] = packet.data
+                save_leaderboard(leaderboard)
                 return
+            i += 1
         
         leaderboard[packet.index].user.append(packet.data)
         save_leaderboard(leaderboard)
@@ -130,6 +133,13 @@ def start_server():
         # Start a new thread and return its identifier
         start_new_thread(threaded, (client,))
     server.close()
+
+
+# def generate_weekly():
+#     all_problems = kattis.problems_ordered(37)
+#     print("Done")
+
+# generate_weekly()
 
 #Increases recursion to handle pickling better
 sys.setrecursionlimit(3000)
