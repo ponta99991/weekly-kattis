@@ -27,13 +27,55 @@ def problems_ordered(pages=1) -> dict:
     :param pages: number of problem pages, defaults to 1
     :rtype: list of problem objects
     """
-    ret = []
+    ret_id = []
+    ret_diff = []
     for page in range(pages):
         print("Fetching page " + str(page) + "...")
-        probs = Utils.html_page(requests.get(URL + "?order=difficulty_category" + "?page={}".format(page)))
-        for problem_id in problem_list(probs):
-            ret.append(problem(problem_id))
-    return ret
+        probs = Utils.html_page(requests.get(URL + "?order=difficulty_category" + "&page={}".format(page)))
+        [id, diff] = extract_difficulty_from_list(probs)
+        ret_id = ret_id + id
+        ret_diff = ret_diff + diff
+
+
+        # for difficulties in extract_difficulty_from_list(probs):
+        #     ret.append(difficulties)
+    return [ret_id, ret_diff]
+
+def extract_difficulty_from_list(page):
+    """
+    Returns a list of difficulties:
+    """
+    #Extract problem difficultis
+    problem_field = page.findAll("span", "difficulty_number")
+    difficulties = [problem_field[i].text for i in range(len(problem_field))]
+
+    problem = page.findAll("td", "bubble-container")
+    problem = [problem[i].contents[1] for i in range(len(problem))]
+    problem_id = [problem[i]['href'].split("/")[2] for i in range(len(problem))]
+    #problem_id = [problem_field[i].text for i in range(len(problem_field))]
+    
+    #Extract problem id
+    #problems = page.findAll("a", recursive=True)[18:-4]
+    #problem_id = [str(problems[i]).split("/")[2].split('"')[0] for i in range(0, len(problems), 3)]
+            # obj = dict(
+        #     date=submission_children[1].contents,
+        #     runtime=submission_children[4].contents,
+        #     lang=submission_children[5].contents
+        # )
+    # res = []
+    # for i in range(0, len(problem_id)):
+    #     res.append
+    #     (
+    #         dict
+    #         (
+    #             id = problem_id[i],
+    #             diff = difficulties[i]
+    #         )
+    #     )
+    
+    #res = map(lambda "id", problem_id[i], diff:difficulties[i]) for i in range(0, len(problem_id))
+    return [problem_id, difficulties]  
+    
 
 def problem(problem_id: str) -> dict:
     """

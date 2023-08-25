@@ -387,8 +387,6 @@ def get_problem():
 def on_closing():
     sys.exit()
 
-#Increases recursion to handle pickling better
-sys.setrecursionlimit(3000)
 
 window = tk.Tk()
 window.title("Strobe's Kattis Client")
