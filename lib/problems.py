@@ -38,11 +38,11 @@ def problem(problem_id: str) -> dict:
 
     add_problem_information(problem_page, obj)
     add_problem_statistics(stats_page, obj)
-    add_problem_custom(problem_page, obj)
+    add_problem_title(problem_page, obj)
 
     return obj
 
-def add_problem_custom(problem_page, problem: dict) -> None:
+def add_problem_title(problem_page, problem: dict) -> None:
     """
     Parses problem information and adds it
     to problem object
@@ -50,8 +50,8 @@ def add_problem_custom(problem_page, problem: dict) -> None:
     """
     fields = ["title"]
     info = problem_page.find("h1", "book-page-heading")
-    title = info.next
-    #info = re.sub(r'[a-zA-Z]', '', title).strip()
+    title = info.next.text
+    #title = re.sub(r'[a-zA-Z]', '', title).strip()
     problem["title"] = title
 
 def add_problem_information(problem_page, problem: dict) -> None:

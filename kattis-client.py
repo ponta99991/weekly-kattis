@@ -67,13 +67,16 @@ def load_credentials():
     file.close()
     #return [username, password]
 
+is_logged_in_on_kattis = False
 def on_login():
+    global username
     username = username_field.get()
     password = password_field.get()
     if(len(username) < 1 or len(password) < 1):
         tkinter.messagebox.showinfo("Error!", "Enter your credentials")
         return
     
+    global kattis_user
     kattis_user = kattis_auth.auth(username, password)
 
     if(kattis_user == 0):
@@ -84,15 +87,19 @@ def on_login():
         save_credentials(username, password)
         #print("Saving!")
     
+
     clearFrame(frame_login)
-    
+    global is_logged_in_on_kattis
+    is_logged_in_on_kattis = True
     #Login frame
-    global kattis_user_data
+    global kattis_user_stats
     kattis_user_stats = kattis_user.stats()
     tk.Label(frame_login, text="Logged in as: \n" + kattis_user.username).grid(row=0, column=0)
     tk.Label(frame_login, text="Score: " + kattis_user_stats['score']).grid(row=1, column=0)
     tk.Label(frame_login, text="Rank: #" + kattis_user_stats['rank']).grid(row=2, column=0)
 
+    if is_connected_to_server:
+        create_validator()
     #print(kattis_user.stats())
 
 # def on_load_credentials():
@@ -134,7 +141,7 @@ def on_check_for_solution():
 #     connection_error_text = ""
 #     connection_error_field = tk.Label(connect_frame, foreground="red", textvariable=connection_error_text)
 #     connection_error_field.pack()
-
+is_connected_to_server = False
 def on_connect():
     global server
     [connection_established, server] = network.connect(ip_field.get(), int(port_field.get()))
@@ -142,6 +149,10 @@ def on_connect():
         connection_error_field.config(text = "Connection error...")
         return
 
+    #server.settimeout(1)
+
+    global is_connected_to_server
+    is_connected_to_server = True
     clearFrame(frame_connect)
     # information_frame = tk.LabelFrame(window, text="This Weeks Problem").place(x=WINDOW_W/2, y=0)
     # this_weeks_problem = get_problem()
@@ -154,10 +165,10 @@ def on_connect():
 
     create_choose_task()
 
-def on_show_task(task_number):
-    print(task_number)
-    leaderboard = get_leaderboard(task_number)
-    display_leaderboard(frame_leaderboard, leaderboard)
+    if(is_logged_in_on_kattis):
+        create_validator()
+
+
 
 def create_choose_task():
     frame_choose_task = tk.LabelFrame(frame_sidebar, text="Choose Task" , bg="lime")
@@ -180,6 +191,46 @@ def create_choose_task():
     # label_photo_1 = tkinter.Label(frame_challenge_1, image=photo_1)
     # label_photo_1.image = photo_1
     # label_photo_1.grid(row=0, column=0)
+
+def on_validation():
+    if not ('current_displayed_leaderboard' in globals()):
+        tkinter.messagebox.showinfo("Please!", "Choose an exercise to validate!")
+        return
+
+    [success, date, runtime, lang] = kattis_user.problem(current_displayed_leaderboard.task)
+    if(success == False):
+        tkinter.messagebox.showinfo("Cheating!", "You need to complete the exercise!")
+        return
+
+    #Remember:
+    #Add answer for when person have been added maybee
+    #Atleast add check on server so user is not dublicated.
+    #No add check if user already is uploaded to leaderboard in client.
+    
+    #By some reason the complete html is transmitted? KAttis html
+    new_user = common.User(username=username, date=date, time=runtime, lang=lang)
+    #new_user = common.User(username = "a", lang="b", time="c", date=33)
+    #packet = network.Packet(request=True, content="add_to_leaderboard", data=new_user, index=1)
+    packet = network.Packet(request=True, content="add_to_leaderboard", data=new_user, index=leaderboard_index)
+    print(packet.__sizeof__())
+    network.send_packet(server, packet)
+
+    print(leaderboard_index)
+    leaderboard = get_leaderboard(leaderboard_index)
+    display_leaderboard(frame_leaderboard, leaderboard)
+    
+    clearFrame(frame_validator)
+
+    tk.Label(frame_validator, text="Validated!").pack()
+
+
+def create_validator():
+    global frame_validator
+    frame_validator = tk.LabelFrame(frame_sidebar, text="Validate")
+    frame_validator.grid(row=3, column=0, sticky="e, w")
+    global validate_button
+    validate_button = tk.Button(frame_validator, text="Validate Submission", command=on_validation)
+    validate_button.pack()
 
 
 def create_interface():
@@ -243,8 +294,16 @@ def create_interface():
 
     #When logged in and connected
 
-def get_leaderboard(leaderboard_index):
-    problemRequest = network.Packet(request=True, content="get_leaderboard", index=0)
+def on_show_task(task_number):
+    print(task_number)
+    leaderboard = get_leaderboard(task_number)
+    display_leaderboard(frame_leaderboard, leaderboard)
+
+
+def get_leaderboard(i):
+    global leaderboard_index
+    leaderboard_index = i
+    problemRequest = network.Packet(request=True, content="get_leaderboard", index=leaderboard_index)
     network.send_packet(server, problemRequest)
     packet = network.recieve_packet(server)
     leaderboard = packet.data
@@ -256,6 +315,8 @@ def display_leaderboard(frame_leaderboard, leaderboard):
     frame_title = tk.Frame(frame_leaderboard, bg="orange")
     frame_title.grid(row=0, column=0, padx=5, pady=5)
     
+    global current_displayed_leaderboard
+    current_displayed_leaderboard = leaderboard
     kattis_task = kattis.problem(leaderboard.task)
     print(kattis_task)
     problem_label = tk.Label(frame_title, text=kattis_task["title"], fg="blue", cursor="hand2")
@@ -263,22 +324,28 @@ def display_leaderboard(frame_leaderboard, leaderboard):
     problem_label.bind("<Button-1>", lambda e: callback(kattis_task['url']))
     #tk.Label(frame_title, text=leaderboard.task).pack()
 
+
     frame_header = tk.Frame(frame_leaderboard, bg="yellow")
     frame_header.grid(row=1, column=0, padx=5, pady=5)
     tk.Label(frame_header, text="Username").grid(row=0, column=0)
-    tk.Label(frame_header, text="Score").grid(row=0, column=1)
-    tk.Label(frame_header, text="Time").grid(row=0, column=2)
+    tk.Label(frame_header, text="Time").grid(row=0, column=1)
+    tk.Label(frame_header, text="Lang").grid(row=0, column=2)
     tk.Label(frame_header, text="Date").grid(row=0, column=3)
 
     frame_list = tk.Frame(frame_leaderboard, bg="green")
     frame_list.grid(row=2, column=0, padx=5, pady=5)
+
+    print(leaderboard.user)
+    if len(leaderboard.user) == 0:
+        tk.Label(frame_leaderboard, text="No one have completed the task yet").grid(row=3, column=0)
+        return
     
     for i in range(len(leaderboard.user)):
         leaderboard_user_field = tk.Frame(frame_list, height=20)
         leaderboard_user_field.grid(row=i, column=0)
         tk.Label(leaderboard_user_field, text=leaderboard.user[i].username).grid(row=0, column=0)
-        tk.Label(leaderboard_user_field, text=leaderboard.user[i].score).grid(row=0, column=1)
-        tk.Label(leaderboard_user_field, text=leaderboard.user[i].time).grid(row=0, column=2)
+        tk.Label(leaderboard_user_field, text=leaderboard.user[i].time).grid(row=0, column=1)
+        tk.Label(leaderboard_user_field, text=leaderboard.user[i].lang).grid(row=0, column=2)
         tk.Label(leaderboard_user_field, text=leaderboard.user[i].date).grid(row=0, column=3)
 
 
@@ -292,7 +359,8 @@ def get_problem():
 def on_closing():
     sys.exit()
 
-
+#Increases recursion to handle pickling better
+sys.setrecursionlimit(3000)
 
 window = tk.Tk()
 window.title("Strobe's Kattis Client")

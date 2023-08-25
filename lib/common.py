@@ -20,13 +20,13 @@ format_ = "6shhih50s2s"
 
 class User:
     username: str
-    score: float
     time: float
     date: float
+    lang: str
 
-    def __init__(self, username, score, time, date = 0):
+    def __init__(self, username, lang, time, date = 0):
         self.username = username
-        self.score = score
+        self.lang = lang
         self.time = time
         self.date = date
 
@@ -34,6 +34,6 @@ class Leaderboard:
     task: str
     user: User
 
-    def __init__(self, task, user = []):
+    def __init__(self, task, user):
         self.task = task
         self.user = user

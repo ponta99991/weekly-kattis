@@ -32,15 +32,58 @@ def send_packet(destination, packet):
 def send_string(destination, str):
     destination.send(str.encode())  # send message
 
+# def recieve_packet(destination):
+#     #try:    while True:
+#     try:
+#         packet = destination.recv(100000)
+#     except TimeoutError:
+#         return 0
+#     return pickle.loads(packet)
+
 def recieve_packet(destination):
-    try:
-        packet = pickle.loads(destination.recv(1024))
-    except:
-        return 0
-    return packet
+    #try:
+    data = []
+    while True:
+        try:
+            packet = destination.recv(1024)
+        except:
+            return 0
+        
+        data.append(packet)
+        if not packet.__sizeof__() >= 1056:
+            break
+        #if not packet: 
+
+    if len(data) == 1:
+        packet = pickle.loads(packet)
+        return packet
+    assembled_packet = pickle.loads(b"".join(data))
+    #packet = pickle.loads(destination.recv(1024))
+    #except:
+    #    return 0
+    return assembled_packet
+
+# def recieve_packet(destination):
+#     #try:
+#     data = []
+#     while True:
+#         print("Test")
+#         try:
+#             packet = destination.recv(1024)
+#         except:
+#             if(len(data) == 0):
+#                 return 0
+#             break
+#         #if not packet: 
+#         data.append(packet)
+#     assembled_packet = pickle.loads(b"".join(data))
+#     #packet = pickle.loads(destination.recv(1024))
+#     #except:
+#     #    return 0
+#     return assembled_packet
 
 def recieve_string(destination):
-    message = destination.recv(1024).decode()  # receive response
+    message = destination.recv(4096).decode()  # receive response
     return message
 
 def terminate_connection(destination):
