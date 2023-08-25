@@ -18,6 +18,8 @@ from collections import namedtuple
 from cryptography.fernet import Fernet
 import getpass
 
+VERSION_NUMBER = "0.6"
+
 WINDOW_W = 800
 WINDOW_H = 600
 
@@ -157,6 +159,18 @@ def on_connect():
         connection_error_field.config(text = "Connection error...")
         return
 
+    packet = network.Packet(request=True, content="validate_version", data=VERSION_NUMBER, index=0)
+    network.send_packet(server, packet)
+    answer = network.recieve_packet(server)
+    if(not answer.content == "version"):
+        tkinter.messagebox.showinfo("Verion mismatch!", "You have incorrect verion of " + VERSION_NUMBER + "!")
+        return False
+
+    if(not answer.data == VERSION_NUMBER):
+        ans = "Your version is " + VERSION_NUMBER + ", but the server has version " + answer.data + "!"
+        tkinter.messagebox.showinfo("Verion mismatch!", ans)
+        return False
+
     #server.settimeout(1)
 
     global is_connected_to_server
@@ -173,7 +187,7 @@ def on_connect():
 
     create_choose_task()
 
-    
+    return True
 
 
 
@@ -228,7 +242,7 @@ def on_validation():
     #new_user = common.User(username = "a", lang="b", time="c", date=33)
     #packet = network.Packet(request=True, content="add_to_leaderboard", data=new_user, index=1)
     packet = network.Packet(request=True, content="add_to_leaderboard", data=new_user, index=leaderboard_index)
-    print(packet.__sizeof__())
+    #print(packet.__sizeof__())
     network.send_packet(server, packet)
 
     print(leaderboard_index)

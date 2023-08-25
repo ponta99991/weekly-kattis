@@ -21,6 +21,8 @@ except:
 
 import socket
 
+VERSION_NUMBER = "0.6"
+
 print_lock = threading.Lock()
 
 def save_leaderboard(filename, leaderboard):
@@ -55,6 +57,17 @@ def get_option(client, packet):
     #     print("Sending..." + this_weeks_problem)
     #     answer = network.Packet(request=False, content="weekly", data=this_weeks_problem)
     #     network.send_packet(client, answer)
+
+    #Check the clients version:
+    if(packet.content == "validate_version"):
+        print("Sending version...")
+        answer = network.Packet(request=False, content="version", data=VERSION_NUMBER)
+        network.send_packet(client, answer)
+        if not packet.data == VERSION_NUMBER:
+            print("Version of client is incorrect!\nTerminating connection...")
+            client.close()
+            sys.exit()
+
 
     if(packet.content == "get_leaderboard"):
         print("Sending leaderboard...")
@@ -97,26 +110,6 @@ def threaded(client):
     client.close()
 
 
-# thread function
-def threaded(client):
-    while True:
- 
-        # data received from client
-        packet = network.recieve_packet(client)
-        if packet == 0:
-            print('Terminating')
-            #print_lock.release()
-             
-            # lock released on exit
-            break
-        else:
-            if packet.request == True:
-                get_option(client, packet)
-            
-        #network.send_string(client, message)
- 
-    # connection closed
-    client.close()
  
  
 def start_server():
@@ -148,8 +141,6 @@ def start_server():
             else:
                 break
 
-        # lock acquired by client
-        #print_lock.acquire()
         print('Connected to :', addr[0], ':', addr[1])
  
         # Start a new thread and return its identifier
