@@ -26,6 +26,13 @@ WINDOW_H = 600
 def callback(url):
     webbrowser.open_new(url)
 
+#So that the images are correctly included in the .exe
+def get_path(filename):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, filename)
+    else:
+        return "res/" + filename
+
 def save_credentials(alias, username, password):
     #print("Enter username: ")
     #username = input()
@@ -199,7 +206,7 @@ def create_choose_task():
     global button_task 
     button_task = []
     image_photo = []
-    image_button = [Image.open('res/easy.png'), Image.open('res/mid.png'), Image.open('res/hard.png')]
+    image_button = [Image.open(get_path('easy.png')), Image.open(get_path('mid.png')), Image.open(get_path('hard.png'))]
     for i in range(3):
         image_photo.append(ImageTk.PhotoImage(image_button[i]))
         button = tkinter.Button(frame_choose_task, image=image_photo[i], command= lambda c=i: on_show_task(c), width=50, height=50)
@@ -292,9 +299,9 @@ def create_interface():
     tk.Label(frame_connect, text="Host Name").grid(row=0, column=0)
     global ip_field
     ip_field = tk.Entry(frame_connect)
-    ip_field.insert(0, "192.168.1.100")
+    #ip_field.insert(0, "192.168.1.100")
+    ip_field.insert(0, "strobeindustries.net")
     ip_field.grid(row=1, column=0)
-    #ip_field.insert(0, "strobeindustries.net")
     tk.Label(frame_connect, text="Port").grid(row=2, column=0)
     global port_field
     port_field = tk.Entry(frame_connect)

@@ -67,6 +67,7 @@ def get_option(client, packet):
             print("Version of client is incorrect!\nTerminating connection...")
             client.close()
             sys.exit()
+        print("Version validated!\n")
 
 
     if(packet.content == "get_leaderboard"):
