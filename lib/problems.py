@@ -41,6 +41,34 @@ def problems_ordered(pages=1) -> dict:
         #     ret.append(difficulties)
     return [ret_id, ret_diff]
 
+def problems_ordered_all() -> dict:
+    """
+    Fetches all Kattis problems
+
+    :param pages: number of problem pages, defaults to 1
+    :rtype: list of problem objects
+    """
+    ret_id = []
+    ret_diff = []
+    #Capped to 100 in case of problems
+    for page in range(100):
+        print("Fetching page " + str(page) + "...")
+        probs = Utils.html_page(requests.get(URL + "?order=difficulty_category" + "&page={}".format(page)))
+        [id, diff] = extract_difficulty_from_list(probs)
+        if len(id) < 1 or len(diff) < 1:
+            print("Empty page found, stopping..")
+            break
+        if len(id) != len(diff):    
+            print("Mismatch in amount of IDs and difficulties, quitting...")
+            return [-1, -1]
+        ret_id = ret_id + id
+        ret_diff = ret_diff + diff
+
+
+        # for difficulties in extract_difficulty_from_list(probs):
+        #     ret.append(difficulties)
+    return [ret_id, ret_diff]
+
 def extract_difficulty_from_list(page):
     """
     Returns a list of difficulties:
@@ -49,9 +77,21 @@ def extract_difficulty_from_list(page):
     problem_field = page.findAll("span", "difficulty_number")
     difficulties = [problem_field[i].text for i in range(len(problem_field))]
 
-    problem = page.findAll("td", "bubble-container")
-    problem = [problem[i].contents[1] for i in range(len(problem))]
-    problem_id = [problem[i]['href'].split("/")[2] for i in range(len(problem))]
+    #Return in case of not finding any elements
+    if len(difficulties) < 1:
+        return [[],[]]
+
+    #problem = page.findAll("td", "bubble-container")
+    link_entry = page.findAll("td")#, attrs={"class": " "})
+    problem_id = []
+    for i, p in enumerate(link_entry):
+        if hasattr(p.contents[0], 'attrs') and 'href' in p.contents[0].attrs and 'title' in p.contents[0].attrs:
+            problem_id.append(p.contents[0]['href'].split("/")[2])
+
+    
+    #problem = [problem[i].contents[1] for i in range(len(problem))]
+    #problem_id = [problem[i]['href'].split("/")[2] for i in range(len(problem))]
+    
     #problem_id = [problem_field[i].text for i in range(len(problem_field))]
     
     #Extract problem id

@@ -150,7 +150,9 @@ def start_server():
 
 
 def generate_weekly():
-    [id, diff] = kattis.problems_ordered(37)
+    [id, diff] = kattis.problems_ordered_all()
+    if id == -1:
+        exit(-1)
     #[id, diff] = kattis.problems_ordered()
 
     #Convert ranges to float
